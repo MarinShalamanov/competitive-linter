@@ -22,7 +22,7 @@ namespace {
   
 using namespace clang;
 
-class CheckGotoAction : public  PluginASTAction {
+class CheckDebugMacroAction : public  PluginASTAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(
     CompilerInstance &CI, llvm::StringRef) override {
@@ -66,5 +66,5 @@ protected:
   
 }
 
-static FrontendPluginRegistry::Add<CheckGotoAction>
+static FrontendPluginRegistry::Add<CheckDebugMacroAction>
     X("debug_macro", "Check for commmented lines with cout-s and suggests using debug macro instead.");

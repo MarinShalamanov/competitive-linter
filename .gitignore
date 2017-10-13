@@ -1,3 +1,4 @@
 build/
 clang-llvm/
 test/__pycache__/
+*.out
