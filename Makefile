@@ -121,7 +121,9 @@ all: make_builddir \
     $(BUILDDIR)/plugin_goto.so \
     $(BUILDDIR)/plugin_floating_point_comp.so \
     $(BUILDDIR)/plugin_no_float.so \
-    $(BUILDDIR)/plugin_consecutive_newlines.so
+    $(BUILDDIR)/plugin_consecutive_newlines.so \
+    $(BUILDDIR)/plugin_fast_cin.so \
+    $(BUILDDIR)/plugin_debug_macro.so
     
 
 .PHONY: test
@@ -149,6 +151,14 @@ $(BUILDDIR)/plugin_no_float.so: $(SRC_CLANG_DIR)/plugin_no_float.cpp
 		$(PLUGIN_LDFLAGS) $(LLVM_LDFLAGS_NOLIBS) -o $@
 
 $(BUILDDIR)/plugin_consecutive_newlines.so: $(SRC_CLANG_DIR)/plugin_consecutive_newlines.cpp
+	$(CXX) $(PLUGIN_CXXFLAGS) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $^ \
+		$(PLUGIN_LDFLAGS) $(LLVM_LDFLAGS_NOLIBS) -o $@
+
+$(BUILDDIR)/plugin_fast_cin.so: $(SRC_CLANG_DIR)/plugin_fast_cin.cpp
+	$(CXX) $(PLUGIN_CXXFLAGS) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $^ \
+		$(PLUGIN_LDFLAGS) $(LLVM_LDFLAGS_NOLIBS) -o $@
+
+$(BUILDDIR)/plugin_debug_macro.so: $(SRC_CLANG_DIR)/plugin_debug_macro.cpp
 	$(CXX) $(PLUGIN_CXXFLAGS) $(CXXFLAGS) $(LLVM_CXXFLAGS) $(CLANG_INCLUDES) $^ \
 		$(PLUGIN_LDFLAGS) $(LLVM_LDFLAGS_NOLIBS) -o $@
 

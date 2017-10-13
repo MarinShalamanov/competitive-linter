@@ -45,25 +45,32 @@ public:
   EqualsHandler() {}
 
   virtual void run(const MatchFinder::MatchResult &result) { 
-    if (const BinaryOperator *comparison =
-          result.Nodes.getNodeAs<BinaryOperator>(EQUALS_OP_BINDING)) {
-      auto& diagnostics = result.Context->getDiagnostics();
-      const unsigned ID = diagnostics.getCustomDiagID(
-        clang::DiagnosticsEngine::Error,
-        "This floating point operation can lead to errors.");  
-      auto builder = diagnostics.Report(comparison->getOperatorLoc(), ID);
-      auto locEnd = Lexer::getLocForEndOfToken(comparison->getLocEnd(), 
-                                               0, 
-                                               *result.SourceManager, 
-                                               LangOptions());
-      SourceRange sourceRange(comparison->getLocStart(), locEnd);
-      auto hintStr = getFloatEqualsReplecementHint(*comparison);
-      const auto hint = FixItHint::CreateReplacement(sourceRange, hintStr);
-      builder.AddFixItHint(hint); 
-    }
+    
+    auto& diagnostics = result.Context->getDiagnostics();
+    const unsigned ID = diagnostics.getCustomDiagID(
+      clang::DiagnosticsEngine::Error, "Here.");  
+//    auto builder = diagnostics.Report(location, ID);
   }
-}; 
+};
 
+
+/*
+AST sample:
+
+FunctionDecl <line:5:1, line:8:1> line:5:5 main 'int (void)'
+  `-CompoundStmt <col:12, line:8:1>
+    |-CallExpr <line:6:5, col:36> '_Bool'
+    | |-ImplicitCastExpr <col:5, col:15> '_Bool (*)(_Bool)' <FunctionToPointerDecay>
+    | | `-DeclRefExpr <col:5, col:15> '_Bool (_Bool)' lvalue CXXMethod 0x6add900 'sync_with_stdio' '_Bool (_Bool)'
+    | `-CXXBoolLiteralExpr <col:31> '_Bool' false
+    `-CXXMemberCallExpr <col:39, col:51> 'basic_ostream<char, struct std::char_traits<char> > *'
+      |-MemberExpr <col:39, col:43> '<bound member function type>' .tie 0x6c0a100
+      | `-ImplicitCastExpr <col:39> 'class std::basic_ios<char>' lvalue <UncheckedDerivedToBase (virtual basic_ios)>
+      |   `-DeclRefExpr <col:39> 'std::istream':'class std::basic_istream<char>' lvalue Var 0x6cae3f8 'cin' 'std::istream':'class std::basic_istream<char>'
+      `-ImplicitCastExpr </opt/compiler-explorer/clang-5.0.0/lib/clang/5.0.0/include/stddef.h:100:18> 'basic_ostream<char, struct std::char_traits<char> > *' <NullToPointer>
+        `-GNUNullExpr <col:18> 'long'
+*/
+  
 class MatchFinderASTConsumer : public ASTConsumer {
 public:
   MatchFinderASTConsumer() {
@@ -120,4 +127,4 @@ protected:
 }
 
 static FrontendPluginRegistry::Add<FloatingPointsCompAction>
-    X("floating_point_comp", "Checks for floating point comparissons, which don't use epsilon.")   ;
+    X("fast_cin", "Checks if the commands for the fast cin/cout are in the code.")   ;

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 clang-llvm/bin/clang++ \
+  -fsyntax-only \
   -Xclang -load -Xclang build/plugin_floating_point_comp.so \
   -Xclang -load -Xclang build/plugin_goto.so \
   -Xclang -load -Xclang build/plugin_consecutive_newlines.so \
@@ -9,4 +10,4 @@ clang-llvm/bin/clang++ \
   -Xclang -add-plugin -Xclang consecutive_newlines \
   -Xclang -add-plugin -Xclang no_float \
   -Xclang -add-plugin -Xclang goto \
-  "$1"
+  "$1"  

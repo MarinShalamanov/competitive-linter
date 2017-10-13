@@ -62,33 +62,15 @@ private:
 
 class CheckGotoAction : public PluginASTAction {
 protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) {
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(
+      CompilerInstance &CI, llvm::StringRef) override {
     DiagnosticsEngineInstance = &(CI.getDiagnostics());
     return llvm::make_unique<CheckGotoConsumer>();
   }
 
   bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &args) {
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << "Goto arg = " << args[i] << "\n";
-
-      // Example error handling.
-      if (args[i] == "-an-error") {
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "invalid argument '%0'");
-        D.Report(DiagID) << args[i];
-        return false;
-      }
-    }
-    if (args.size() && args[0] == "help")
-      PrintHelp(llvm::errs());
-
+                 const std::vector<std::string> &args) override {
     return true;
-  }
-  void PrintHelp(llvm::raw_ostream &ros) {
-    ros << "Reports errors if a goto statement is found.\n";
   }
 };
 }
