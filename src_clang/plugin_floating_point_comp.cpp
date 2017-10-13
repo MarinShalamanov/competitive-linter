@@ -62,70 +62,64 @@ public:
       builder.AddFixItHint(hint); 
     }
   }
-};
+} equalsHandler;
 
-class CheckGotoAction : public  PluginASTAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) {
-    equalsHandler = llvm::make_unique<EqualsHandler>();
+MatchFinder finder; 
+
+class MatchFinderASTConsumer : public ASTConsumer {
+public:
+  MatchFinderASTConsumer() {
+      innerConsumer = finder.newASTConsumer();
     
-    constexpr char floatType[] = "float";
-    constexpr char doubleType[] = "double";
-    constexpr char equalsSign[] = "==";
+      constexpr char floatType[] = "float";
+      constexpr char doubleType[] = "double";
+      constexpr char equalsSign[] = "==";
+
+      // Match '==' operator with float/double LHS. We check only
+      // the LHS because both sides of '==' will be implicitly casted
+      // to the same type.
+      finder.addMatcher(
+        binaryOperator(
+          isExpansionInMainFile(),
+          hasOperatorName(equalsSign), 
+          hasLHS(hasType(asString(doubleType)))
+        ).bind(EQUALS_OP_BINDING),
+        &equalsHandler
+      );
+      finder.addMatcher(
+        binaryOperator(
+          isExpansionInMainFile(),
+          hasOperatorName(equalsSign), 
+          hasLHS(hasType(asString(floatType)))
+        ).bind(EQUALS_OP_BINDING),
+        &equalsHandler
+      );
+  }
     
-    // Match '==' operator with float/double LHS. We check only
-    // the LHS because both sides of '==' will be implicitly casted
-    // to the same type.
-    finder.addMatcher(
-      binaryOperator(
-        isExpansionInMainFile(),
-        hasOperatorName(equalsSign), 
-        hasLHS(hasType(asString(doubleType)))
-      ).bind(EQUALS_OP_BINDING),
-      equalsHandler.get()
-    );
-    finder.addMatcher(
-      binaryOperator(
-        isExpansionInMainFile(),
-        hasOperatorName(equalsSign), 
-        hasLHS(hasType(asString(floatType)))
-      ).bind(EQUALS_OP_BINDING),
-      equalsHandler.get()
-    );
-    
-    return finder.newASTConsumer();
+  void HandleTranslationUnit(ASTContext &context) override {
+    finder.matchAST(context);
   }
-
-  bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &args) {
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << "Goto arg = " << args[i] << "\n";
-
-      // Example error handling.
-      if (args[i] == "-an-error") {
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "invalid argument '%0'");
-        D.Report(DiagID) << args[i];
-        return false;
-      }
-    }
-    if (args.size() && args[0] == "help")
-      PrintHelp(llvm::errs());
-
-    return true;
-  }
-  void PrintHelp(llvm::raw_ostream &ros) {
-    ros << "Reports errors if a goto statement is found.\n";
-  }
-
+  
 private:
-  MatchFinder finder; 
-  std::unique_ptr<EqualsHandler> equalsHandler;
+  MatchFinder finder;
+  EqualsHandler equalsHandler;
+  std::unique_ptr<ASTConsumer> innerConsumer;
+};
+  
+class FloatingPointsCompAction : public  PluginASTAction {
+protected:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(
+    CompilerInstance &CI, llvm::StringRef) override {
+    return llvm::make_unique<MatchFinderASTConsumer>();
+  }
+  
+  bool ParseArgs(const CompilerInstance &CI,
+                 const std::vector<std::string> &args) override {
+    return true;
+  } 
 };
   
 }
 
-static FrontendPluginRegistry::Add<CheckGotoAction>
-    X("floating_point_comp", "check for goto statements");
+static FrontendPluginRegistry::Add<FloatingPointsCompAction>
+    X("floating_point_comp", "check for goto statements")   ;

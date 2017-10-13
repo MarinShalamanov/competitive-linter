@@ -12,5 +12,11 @@ int main() {
 		cout << "odd";
         goto hell;
 	}
+  
+  
+  
+  
+  
+  
 	end: ;
 }

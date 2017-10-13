@@ -24,8 +24,8 @@ using namespace clang;
 
 class CheckGotoAction : public  PluginASTAction {
 protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) {
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(
+    CompilerInstance &CI, llvm::StringRef) override {
     
     auto& sourceManager = CI.getSourceManager();
     auto mainFile = sourceManager.getMainFileID();
@@ -38,7 +38,7 @@ protected:
       if (tooMuchNewLines.match(source, &matches)) {
         int offset = matches[0].begin() - source.begin();
         auto location = sourceManager.getLocForStartOfFile(mainFile).getLocWithOffset(offset);
-        //matches[0]
+        
         DiagnosticsEngine &D = CI.getDiagnostics();
         unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
                                             "Too much new lines.");
@@ -46,34 +46,16 @@ protected:
       } 
     }
     
-    return nullptr;
+    return llvm::make_unique<ASTConsumer>();
   }
-
+  
   bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &args) {
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << "Goto arg = " << args[i] << "\n";
-
-      // Example error handling.
-      if (args[i] == "-an-error") {
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "invalid argument '%0'");
-        D.Report(DiagID) << args[i];
-        return false;
-      }
-    }
-    if (args.size() && args[0] == "help")
-      PrintHelp(llvm::errs());
-
+                 const std::vector<std::string> &args) override {
     return true;
-  }
-  void PrintHelp(llvm::raw_ostream &ros) {
-    ros << "Reports errors if a goto statement is found.\n";
   }
 };
   
 }
 
 static FrontendPluginRegistry::Add<CheckGotoAction>
-    X("consecutive_newlines", "Permits more than 2 consecutive empty lines.");
+    X("consecutive_newlines", "Doesn't permit more than 2 consecutive empty lines.");

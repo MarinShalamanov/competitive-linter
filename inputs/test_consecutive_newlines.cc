@@ -17,7 +17,7 @@ int main() {
 	float a, b;
     int c;
     cin >> a >> b;
-    if (13.4*a == 10*b - 350) {
+    if (a) {
         return 1;
     } else {
         return 0;

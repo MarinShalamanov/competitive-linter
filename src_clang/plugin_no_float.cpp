@@ -27,9 +27,9 @@ using namespace ast_matchers;
 constexpr char VAR_DECL_BINDING[] = "vardecl";
 constexpr char FUNC_DECL_BINDING[] = "funcdecl";
     
-class EqualsHandler : public MatchFinder::MatchCallback {
+class DeclHandler : public MatchFinder::MatchCallback {
 public:
-  EqualsHandler() {}
+  DeclHandler() {}
 
   virtual void run(const MatchFinder::MatchResult &result) { 
     auto& diagnostics = result.Context->getDiagnostics();
@@ -56,33 +56,9 @@ public:
   }
 };
 
-class CheckGotoAction : public  PluginASTAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 llvm::StringRef) {
-    
-    auto& sourceManager = CI.getSourceManager();
-    auto mainFile = sourceManager.getMainFileID();
-    bool error = false;
-    StringRef source = sourceManager.getBufferData(mainFile, &error);
-    
-    if (!error) {
-      llvm::errs() << source;
-      llvm::Regex tooMuchNewLines("(\n[ \t\r\v\f]*){4}");
-      SmallVector<StringRef, 1> matches;
-      if (tooMuchNewLines.match(source, &matches)) {
-        int offset = matches[0].begin() - source.begin();
-        auto location = sourceManager.getLocForStartOfFile(mainFile).getLocWithOffset(offset);
-        //matches[0]
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "Too much new lines.");
-        D.Report(location, DiagID);
-      }
-      
-    }
-    
-    equalsHandler = llvm::make_unique<EqualsHandler>();
+class MatchFinderASTConsumer : public ASTConsumer {
+public:
+  MatchFinderASTConsumer() {
     constexpr char floatType[] = "float";
     
     finder.addMatcher(
@@ -90,45 +66,38 @@ protected:
         isExpansionInMainFile(), 
         hasType(asString(floatType))
       ).bind(VAR_DECL_BINDING),
-      equalsHandler.get()
+      &callback
     );
     finder.addMatcher(
       functionDecl(
         isExpansionInMainFile(),
         returns(asString(floatType))
       ).bind(FUNC_DECL_BINDING),
-      equalsHandler.get()
+      &callback
     );
+  }
     
-    return finder.newASTConsumer();
+  void HandleTranslationUnit(ASTContext &context) override {
+    finder.matchAST(context);
+  }
+  
+private:
+  MatchFinder finder;
+  DeclHandler callback;
+  std::unique_ptr<ASTConsumer> innerConsumer;
+};
+  
+class CheckGotoAction : public  PluginASTAction {
+protected:
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(
+    CompilerInstance &CI, llvm::StringRef) override {
+    return llvm::make_unique<MatchFinderASTConsumer>();
   }
 
   bool ParseArgs(const CompilerInstance &CI,
-                 const std::vector<std::string> &args) {
-    for (unsigned i = 0, e = args.size(); i != e; ++i) {
-      llvm::errs() << "Goto arg = " << args[i] << "\n";
-
-      // Example error handling.
-      if (args[i] == "-an-error") {
-        DiagnosticsEngine &D = CI.getDiagnostics();
-        unsigned DiagID = D.getCustomDiagID(DiagnosticsEngine::Error,
-                                            "invalid argument '%0'");
-        D.Report(DiagID) << args[i];
-        return false;
-      }
-    }
-    if (args.size() && args[0] == "help")
-      PrintHelp(llvm::errs());
-
+                 const std::vector<std::string> &args) override {
     return true;
   }
-  void PrintHelp(llvm::raw_ostream &ros) {
-    ros << "Reports errors if a goto statement is found.\n";
-  }
-
-private:
-  MatchFinder finder; 
-  std::unique_ptr<EqualsHandler> equalsHandler;
 };
   
 }
