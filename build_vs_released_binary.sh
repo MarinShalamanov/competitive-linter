@@ -15,7 +15,7 @@
 set -eu
 set -x
 
-BINARY_DIR_PATH="/home/marin/dev/competition-lint/clang-llvm"
+BINARY_DIR_PATH="${1:-/home/marin/dev/competition-lint/clang-llvm}"
 
 make -j8 \
   CXX=$BINARY_DIR_PATH/bin/clang++ \
